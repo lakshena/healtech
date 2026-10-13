@@ -40,7 +40,7 @@ python app.py
 ```
 
 When the server reports that it is running, open the dashboard at
-<http://127.0.0.1:5000>. This is the hospital status overview. To open a
+<http://172.16.15.245:5000/marketplace>. This is the hospital status overview. To open a
 specific section directly, visit `/patient`, `/staff`, `/ambulance`, or
 `/marketplace` on the same address.
 
