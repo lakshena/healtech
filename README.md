@@ -44,6 +44,26 @@ When the server reports that it is running, open the dashboard at
 specific section directly, visit `/patient`, `/staff`, `/ambulance`, or
 `/marketplace` on the same address.
 
+The Flask app listens on all network interfaces by default, so a device on
+the same private network can open `http://<server-LAN-IP>:5000/marketplace`
+(for example, replace `<server-LAN-IP>` with the address assigned to the
+computer running Flask). Do not use `127.0.0.1` from another device: that
+address always refers to the device you're using. If the page still cannot be
+reached, allow inbound connections to the chosen port on the server's private
+network firewall. Hosting providers may require a specific port; set `PORT`
+before launch, for example:
+
+```powershell
+$env:PORT = "8080"
+python app.py
+```
+
+The app also honors `HOST`; set it only if the hosting environment requires a
+specific bind address. For a public or production deployment, use a production
+WSGI server and add authentication, HTTPS, and hospital-level access controls.
+Binding to `0.0.0.0` alone does not publish the app through a hosting provider's
+firewall or router.
+
 ### Pages
 
 | URL | Function |
@@ -116,12 +136,15 @@ Install its additional packages and run it:
 
 ```powershell
 python -m pip install streamlit pandas plotly requests
-python -m streamlit run "Dashboard main.py"
+python -m streamlit run "Dashboard main.py" --server.address 0.0.0.0 --server.port 8501
 ```
 
 Streamlit prints a **Local URL** in the terminal when the dashboard is ready
 (typically <http://localhost:8501>). Open that URL in a browser, then choose
-**Hospital overview** or **Marketplace** in the left sidebar.
+**Hospital overview** or **Marketplace** in the left sidebar. For another
+device on the same private network, open
+`http://<server-LAN-IP>:8501` instead. This Streamlit marketplace is a separate
+visual sample from the Flask `/marketplace` page and its listing editor.
 
 ### Hospital overview features
 

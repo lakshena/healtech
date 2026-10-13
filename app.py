@@ -1,5 +1,5 @@
 """Predictive Patient Flow Orchestrator - Flask + Bootstrap prototype."""
-import csv, io, json, random
+import csv, io, json, os, random
 from pathlib import Path
 from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
 import qrcode
@@ -274,4 +274,8 @@ def api_approve():
     return jsonify(patient=p)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        host=os.getenv("HOST", "0.0.0.0"),
+        port=int(os.getenv("PORT", "5000")),
+        debug=os.getenv("FLASK_DEBUG") == "1",
+    )
