@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 280" role="img" aria-label="Illustration of a manual wheelchair">
+  <rect width="480" height="280" rx="18" fill="#f4f8f2"/>
+  <circle cx="151" cy="183" r="67" fill="#fff" stroke="#222" stroke-width="8"/>
+  <circle cx="151" cy="183" r="8" fill="#222"/>
+  <path d="m151 183 43-74 45 3 31 57m-76-60 55 69h-66l-31-45m47-24 17-35h38" fill="none" stroke="#222" stroke-linecap="round" stroke-linejoin="round" stroke-width="9"/>
+  <path d="M197 104h-48l-13-28h-33m88 28 28 58" fill="none" stroke="#6e8c6c" stroke-linecap="round" stroke-linejoin="round" stroke-width="9"/>
+  <path d="M220 169h55l16 16m-78-15-15 44" fill="none" stroke="#222" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"/>
+  <circle cx="300" cy="203" r="20" fill="#fff" stroke="#222" stroke-width="7"/>
+  <circle cx="300" cy="203" r="5" fill="#222"/>
+  <circle cx="323" cy="189" r="8" fill="#e1eee0" stroke="#222" stroke-width="5"/>
+  <path d="M139 76h-38" fill="none" stroke="#222" stroke-linecap="round" stroke-width="8"/>
+</svg>

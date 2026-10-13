@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 280" role="img" aria-label="Illustration of a bedside patient monitor">
+  <rect width="480" height="280" rx="18" fill="#f4f8f2"/>
+  <path d="M240 197v38m-45 0h90m-72-7h54" fill="none" stroke="#222" stroke-linecap="round" stroke-width="8"/>
+  <rect x="126" y="54" width="228" height="146" rx="16" fill="#fff" stroke="#222" stroke-width="8"/>
+  <rect x="146" y="73" width="188" height="101" rx="8" fill="#eaf4e8"/>
+  <path d="M159 127h34l15-31 23 57 20-40 13 14h55" fill="none" stroke="#547952" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"/>
+  <circle cx="171" cy="187" r="5" fill="#222"/>
+  <circle cx="190" cy="187" r="5" fill="#222"/>
+  <path d="M211 187h40" fill="none" stroke="#222" stroke-linecap="round" stroke-width="5"/>
+  <path d="M354 107h22q14 0 14 14v74" fill="none" stroke="#222" stroke-linecap="round" stroke-width="6"/>
+  <circle cx="390" cy="201" r="9" fill="#fff" stroke="#222" stroke-width="5"/>
+</svg>
