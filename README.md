@@ -74,6 +74,34 @@ WSGI server and add authentication, HTTPS, and hospital-level access controls.
 Binding to `0.0.0.0` alone does not publish the app through a hosting provider's
 firewall or router.
 
+### Publish the Flask website on Render
+
+The repository includes a Render Blueprint (`render.yaml`) for deploying the
+**whole Flask app**. This publishes the overview and all Flask pages; the
+marketplace is at `/marketplace` on the same site, not a separate service.
+
+1. Push or merge the deployment files to the GitHub branch you want to deploy.
+2. In Render, choose **New → Blueprint**, connect this GitHub repository, and
+   select that branch.
+3. Review and apply the Blueprint. It installs `requirements-render.txt` and
+   starts the Flask WSGI app with Render's assigned port.
+4. When the service is live, copy its public `https://<service-name>.onrender.com`
+   address. Share the marketplace at
+   `https://<service-name>.onrender.com/marketplace`; replace the example host
+   with the exact URL Render assigns.
+
+The Render Blueprint uses the free web-service plan, which may spin down while
+idle. Its local demo JSON and CSV files are not backed by persistent storage;
+edits or sample-data changes may be lost when the service restarts or is
+redeployed.
+
+**Public demo warning:** this app has no login or hospital-level authorization.
+Anyone with the public link may view and change demo patient data and may add,
+edit, remove, or order marketplace listings. Use only fictional data for a
+public demo. Do not enter real patient information or use this deployment for
+real clinical workflows or transactions. Add authentication and persistent
+storage before broader operational use.
+
 ### Pages
 
 | URL | Function |
