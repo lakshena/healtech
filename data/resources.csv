@@ -1,0 +1,4 @@
+hospital,resource,type,available
+Apollo,ventilator,equipment,5
+SRM,ambulance,vehicle,2
+KMC,ICU bed,bed,10

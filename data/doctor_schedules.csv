@@ -1,0 +1,5 @@
+doctor,department,shift_start,shift_end
+Dr. Rao,ER,08:00,16:00
+Dr. Mehta,ICU,08:00,20:00
+Dr. Iyer,General,09:00,17:00
+Dr. Khan,ER,16:00,00:00

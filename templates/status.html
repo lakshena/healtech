@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block body %}
+<h2>Hospital status</h2>
+<div class="row g-3 mb-4">
+{% for ward, b in beds.items() %}<div class="col-md-4"><div class="card"><div class="card-body">
+<h5>{{ ward }}</h5><p class="display-6 mb-0">{{ b.total - b.occupied }} <small class="fs-6 text-muted">of {{ b.total }} free</small></p>
+</div></div></div>{% endfor %}
+</div>
+<p>Patients waiting: <b>{{ patients|selectattr('status','equalto','waiting')|list|length }}</b></p>
+<div class="row g-3"><div class="col-md-6"><div class="card card-body"><h5>Bed occupancy</h5><canvas id="beds"></canvas></div></div>
+<div class="col-md-6"><div class="card card-body"><h5>Patient arrivals by hour</h5><canvas id="arr"></canvas></div></div></div>
+<div class="card card-body mt-3"><h5>Doctors on shift</h5><table class="table table-sm mb-0">
+<tr><th>Doctor</th><th>Dept</th><th>Shift</th></tr>
+{% for d in doctors %}<tr><td>{{d.doctor}}</td><td>{{d.department}}</td><td>{{d.shift_start}}–{{d.shift_end}}</td></tr>{% endfor %}</table></div>
+{% endblock %}{% block scripts %}<script>
+const beds={{ beds|tojson }}, arr={{ arrivals|tojson }};
+new Chart(beds_el=document.getElementById('beds'),{type:'bar',data:{labels:Object.keys(beds),datasets:[
+{label:'Occupied',data:Object.values(beds).map(b=>b.occupied)},{label:'Free',data:Object.values(beds).map(b=>b.total-b.occupied)}]},options:{scales:{x:{stacked:true},y:{stacked:true}}}});
+new Chart(document.getElementById('arr'),{type:'line',data:{labels:arr.map(a=>a.hour+':00'),datasets:[{label:'Arrivals',data:arr.map(a=>+a.arrivals)}]}});
+</script>{% endblock %}

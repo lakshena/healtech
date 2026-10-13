@@ -1,0 +1,249 @@
+"""
+Predictive Patient Flow Orchestrator - Member 1: Backend & Data (Logic Layer)
+
+Run:   pip install flask flask-cors pandas qrcode[pil]
+       python app.py
+Docs:  see README endpoints at the bottom of this file.
+"""
+import base64
+import io
+import json
+import os
+import uuid
+from datetime import datetime
+
+import pandas as pd
+import qrcode
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)  # lets the Streamlit / Bootstrap frontend call the API
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+DOCTORS_CSV = os.path.join(DATA_DIR, "doctors.csv")
+BEDS_CSV = os.path.join(DATA_DIR, "beds.csv")
+PATIENTS_JSON = os.path.join(DATA_DIR, "patients.json")
+
+# ---------------------------------------------------------------- mock data
+def seed_data():
+    os.makedirs(DATA_DIR, exist_ok=True)
+    if not os.path.exists(DOCTORS_CSV):
+        pd.DataFrame([
+            ["D01", "Dr. Meera Nair",   "Emergency",  "08:00", "16:00", True],
+            ["D02", "Dr. Arun Kumar",   "Cardiology", "09:00", "17:00", True],
+            ["D03", "Dr. Priya Shah",   "General",    "08:00", "14:00", True],
+            ["D04", "Dr. Ravi Menon",   "Neurology",  "12:00", "20:00", False],
+            ["D05", "Dr. Sana Iqbal",   "General",    "14:00", "22:00", True],
+        ], columns=["doctor_id", "name", "specialty", "shift_start", "shift_end", "available"]
+        ).to_csv(DOCTORS_CSV, index=False)
+    if not os.path.exists(BEDS_CSV):
+        pd.DataFrame([
+            ["ICU",       10, 7],
+            ["Ward",      40, 28],
+            ["Emergency", 15, 9],
+        ], columns=["bed_type", "total", "occupied"]).to_csv(BEDS_CSV, index=False)
+    if not os.path.exists(PATIENTS_JSON):
+        save_patients([])
+
+
+def load_patients():
+    with open(PATIENTS_JSON) as f:
+        return json.load(f)
+
+
+def save_patients(patients):
+    with open(PATIENTS_JSON, "w") as f:
+        json.dump(patients, f, indent=2)
+
+
+# --------------------------------------------------------- rule-based triage
+SEVERITY_RANK = {"critical": 1, "high": 2, "moderate": 3, "low": 4}
+
+def triage(severity: str, symptoms: str = "") -> dict:
+    """Transparent rules. Output is a RECOMMENDATION - staff approve it."""
+    sev = severity.lower()
+    text = symptoms.lower()
+    red_flags = ["chest pain", "unconscious", "stroke", "severe bleeding", "not breathing"]
+    flagged = [r for r in red_flags if r in text]
+    if flagged and sev != "critical":
+        sev = "critical"  # upgrade on red-flag symptoms
+        reason = f"Upgraded to critical: red-flag symptom ({', '.join(flagged)})"
+    else:
+        reason = f"Severity '{sev}' mapped by rule"
+
+    unit = {"critical": "ICU", "high": "Emergency", "moderate": "Ward", "low": "Ward"}.get(sev, "Ward")
+    specialty = "Emergency" if sev in ("critical", "high") else "General"
+    if "chest pain" in text:
+        specialty = "Cardiology"
+    if "stroke" in text:
+        specialty = "Neurology"
+    return {"severity": sev, "recommended_unit": unit,
+            "recommended_specialty": specialty, "reason": reason}
+
+
+def make_qr_b64(payload: str) -> str:
+    img = qrcode.make(payload)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+# ---------------------------------------------------------------- endpoints
+@app.get("/api/health")
+def health():
+    return jsonify(status="ok", time=datetime.now().isoformat(timespec="seconds"))
+
+
+# ---- doctors
+@app.get("/api/doctors")
+def get_doctors():
+    df = pd.read_csv(DOCTORS_CSV)
+    specialty = request.args.get("specialty")
+    if specialty:
+        df = df[df["specialty"].str.lower() == specialty.lower()]
+    if request.args.get("available") == "true":
+        df = df[df["available"]]
+    return jsonify(df.to_dict(orient="records"))
+
+
+@app.patch("/api/doctors/<doctor_id>")
+def update_doctor(doctor_id):
+    df = pd.read_csv(DOCTORS_CSV)
+    if doctor_id not in df["doctor_id"].values:
+        return jsonify(error="doctor not found"), 404
+    body = request.get_json(force=True)
+    if "available" in body:
+        df.loc[df["doctor_id"] == doctor_id, "available"] = bool(body["available"])
+    df.to_csv(DOCTORS_CSV, index=False)
+    return jsonify(df[df["doctor_id"] == doctor_id].iloc[0].to_dict())
+
+
+# ---- beds
+@app.get("/api/beds")
+def get_beds():
+    df = pd.read_csv(BEDS_CSV)
+    df["free"] = df["total"] - df["occupied"]
+    df["occupancy_pct"] = (df["occupied"] / df["total"] * 100).round(1)
+    return jsonify(df.to_dict(orient="records"))
+
+
+# ---- patients
+@app.post("/api/patients")
+def register_patient():
+    body = request.get_json(force=True)
+    if not body.get("name"):
+        return jsonify(error="name is required"), 400
+
+    result = triage(body.get("severity", "low"), body.get("symptoms", ""))
+    pid = "P" + uuid.uuid4().hex[:6].upper()
+
+    # suggest an available doctor of the recommended specialty
+    docs = pd.read_csv(DOCTORS_CSV)
+    match = docs[(docs["available"]) &
+                 (docs["specialty"] == result["recommended_specialty"])]
+    suggested_doctor = match.iloc[0]["name"] if len(match) else None
+
+    # check bed capacity for the recommended unit
+    beds = pd.read_csv(BEDS_CSV)
+    row = beds[beds["bed_type"] == result["recommended_unit"]].iloc[0]
+    bed_free = int(row["total"] - row["occupied"]) > 0
+
+    patient = {
+        "patient_id": pid,
+        "name": body["name"],
+        "age": body.get("age"),
+        "symptoms": body.get("symptoms", ""),
+        "arrival_mode": body.get("arrival_mode", "walk-in"),  # walk-in | ambulance
+        "status": body.get("status", "registered"),            # en_route | arrived | admitted
+        "triage": result,
+        "severity_rank": SEVERITY_RANK[result["severity"]],
+        "suggested_doctor": suggested_doctor,
+        "bed_available": bed_free,
+        "approved": False,  # human-in-the-loop
+        "registered_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    patients = load_patients()
+    patients.append(patient)
+    save_patients(patients)
+
+    patient["qr_png_base64"] = make_qr_b64(json.dumps(
+        {"id": pid, "name": patient["name"], "severity": result["severity"],
+         "unit": result["recommended_unit"]}))
+    return jsonify(patient), 201
+
+
+@app.get("/api/patients")
+def list_patients():
+    """Sorted high -> low severity, then earliest arrival."""
+    patients = sorted(load_patients(),
+                      key=lambda p: (p["severity_rank"], p["registered_at"]))
+    return jsonify(patients)
+
+
+@app.get("/api/patients/<pid>")
+def get_patient(pid):
+    for p in load_patients():
+        if p["patient_id"] == pid:
+            return jsonify(p)
+    return jsonify(error="patient not found"), 404
+
+
+@app.get("/api/patients/<pid>/qr")
+def patient_qr(pid):
+    p = next((x for x in load_patients() if x["patient_id"] == pid), None)
+    if not p:
+        return jsonify(error="patient not found"), 404
+    payload = json.dumps({"id": pid, "name": p["name"],
+                          "severity": p["triage"]["severity"],
+                          "unit": p["triage"]["recommended_unit"]})
+    return jsonify(patient_id=pid, qr_png_base64=make_qr_b64(payload))
+
+
+@app.patch("/api/patients/<pid>")
+def update_patient(pid):
+    """Update live status (e.g. ambulance en_route -> arrived) or approve triage."""
+    body = request.get_json(force=True)
+    patients = load_patients()
+    for p in patients:
+        if p["patient_id"] == pid:
+            for key in ("status", "approved"):
+                if key in body:
+                    p[key] = body[key]
+            save_patients(patients)
+            return jsonify(p)
+    return jsonify(error="patient not found"), 404
+
+
+@app.get("/api/ambulances")
+def ambulances():
+    """Live ambulance view so beds/doctors can be prepared before arrival."""
+    inbound = [p for p in load_patients()
+               if p["arrival_mode"] == "ambulance" and p["status"] == "en_route"]
+    inbound.sort(key=lambda p: p["severity_rank"])
+    return jsonify(inbound)
+
+
+@app.post("/api/triage")
+def triage_only():
+    """Dry-run the rules without registering anyone."""
+    body = request.get_json(force=True)
+    return jsonify(triage(body.get("severity", "low"), body.get("symptoms", "")))
+
+
+if __name__ == "__main__":
+    seed_data()
+    app.run(debug=True, port=5000)
+
+# ----------------------------------------------------------------- endpoints
+# GET   /api/health
+# GET   /api/doctors?specialty=General&available=true
+# PATCH /api/doctors/<id>            {"available": false}
+# GET   /api/beds
+# POST  /api/patients                {"name","age","symptoms","severity","arrival_mode"}
+# GET   /api/patients                (sorted by severity)
+# GET   /api/patients/<id>
+# GET   /api/patients/<id>/qr
+# PATCH /api/patients/<id>           {"status": "arrived"} or {"approved": true}
+# GET   /api/ambulances
+# POST  /api/triage                  dry-run rules

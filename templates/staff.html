@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block body %}
+<h2>Staff – patient flow</h2>
+<div class="card card-body mb-3"><h5>Scan patient QR</h5><div id="reader" style="max-width:360px"></div>
+<div class="input-group mt-2" style="max-width:360px"><input id="pid" class="form-control" placeholder="or type ID e.g. P-1001">
+<button class="btn btn-success" onclick="act(pid.value,'admitted')">Admit</button>
+<button class="btn btn-secondary" onclick="act(pid.value,'discharged')">Discharge</button></div><div id="msg" class="mt-2"></div></div>
+<table class="table bg-white"><tr><th>ID</th><th>Name</th><th>Severity</th><th>Status</th><th>Ward</th><th></th></tr>
+{% for p in patients %}<tr><td>{{p.id}}</td><td>{{p.name}}</td><td>{{p.severity}}</td><td>{{p.status}}</td><td>{{p.ward or '—'}}</td><td>
+{% if p.status=='waiting' %}<button class="btn btn-sm btn-success" onclick="act('{{p.id}}','admitted')">Admit</button>{% endif %}
+{% if p.status=='admitted' %}<button class="btn btn-sm btn-secondary" onclick="act('{{p.id}}','discharged')">Discharge</button>{% endif %}
+</td></tr>{% endfor %}</table>
+{% endblock %}{% block scripts %}<script>
+async function act(id,status){const [ok,r]=await post(`/api/patients/${id.trim()}/status`,{status});
+if(!ok){msg.innerHTML=`<div class="alert alert-danger">${r.error}</div>`;return;} location.reload();}
+new Html5QrcodeScanner('reader',{fps:10,qrbox:220}).render(t=>{pid.value=t;msg.innerHTML=`<div class="alert alert-info">Scanned ${t} – choose Admit or Discharge</div>`;});
+</script>{% endblock %}

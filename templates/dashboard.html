@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hospital Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>Hospital Flow Dashboard</h1>
+
+  <h2>Bed Occupancy</h2>
+  <ul>
+    {% for bed in beds %}
+      <li>{{ bed['bed_id'] }} - {{ bed['ward'] }} - {{ bed['occupied'] }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Doctor Availability</h2>
+  <ul>
+    {% for doc in doctors %}
+      <li>{{ doc['name'] }} - {{ doc['status'] }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Patient Queue</h2>
+  <ul>
+    {% for p in patients %}
+      <li>{{ p['id'] }} - {{ p['name'] }} - {{ p['status'] }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Register Patient</h2>
+  <form action="/register" method="POST">
+    <input type="text" name="name" placeholder="Patient Name" required>
+    <select name="severity">
+      <option value="critical">Critical</option>
+      <option value="moderate">Moderate</option>
+      <option value="mild">Mild</option>
+    </select>
+    <button type="submit">Register</button>
+  </form>
+
+  <p><a href="/marketplace">Go to Marketplace</a></p>
+</body>
+</html>

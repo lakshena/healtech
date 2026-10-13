@@ -1,0 +1,3 @@
+[{"id": "P-1001", "name": "Asha Verma", "severity": 2, "status": "waiting", "ward": null},
+ {"id": "P-1002", "name": "Rahul Nair", "severity": 4, "status": "admitted", "ward": "ICU"},
+ {"id": "P-1003", "name": "Meera Das", "severity": 1, "status": "waiting", "ward": null}]
