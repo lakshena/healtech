@@ -1,4 +1,4 @@
-hospital,resource,type,available
-Apollo,ventilator,equipment,5
-SRM,ambulance,vehicle,2
-KMC,ICU bed,bed,10
+hospital,resource,type,available,rent_per_day,purchase_price
+Apollo,ventilator,equipment,5,2500,85000
+SRM,ambulance,vehicle,2,6000,1500000
+KMC,ICU bed,bed,10,1000,25000

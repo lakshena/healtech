@@ -7,7 +7,8 @@
 <nav class="navbar navbar-expand navbar-dark bg-dark mb-4"><div class="container">
 <a class="navbar-brand" href="/">Patient Flow</a>
 <div class="navbar-nav"><a class="nav-link" href="/">Status</a><a class="nav-link" href="/patient">Patient</a>
-<a class="nav-link" href="/staff">Staff</a><a class="nav-link" href="/ambulance">Ambulance</a></div></div></nav>
+<a class="nav-link" href="/staff">Staff</a><a class="nav-link" href="/ambulance">Ambulance</a>
+<a class="nav-link" href="{{ url_for('marketplace_page') }}">Marketplace</a></div></div></nav>
 <main class="container">{% block body %}{% endblock %}</main>
 <script>async function post(u,b){const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});return [r.ok,await r.json()];}</script>
 {% block scripts %}{% endblock %}</body></html>

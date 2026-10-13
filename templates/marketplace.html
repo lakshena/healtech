@@ -1,29 +1,279 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Hospital Resource Marketplace</title>
-</head>
-<body>
-  <h1>Smart Resource Marketplace</h1>
-  <table border="1">
-    <tr><th>Hospital</th><th>Resource</th><th>Type</th><th>Available</th></tr>
-    {% for r in resources %}
-      <tr>
-        <td>{{ r['hospital'] }}</td>
-        <td>{{ r['resource'] }}</td>
-        <td>{{ r['type'] }}</td>
-        <td>{{ r['available'] }}</td>
-      </tr>
-    {% endfor %}
-  </table>
+{% extends "base.html" %}
+{% block body %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <a class="text-decoration-none" href="/">← Hospital overview</a>
+    <h1 class="mt-2 mb-1">Medical equipment marketplace</h1>
+    <p class="text-secondary mb-0">Find equipment offered by other hospitals. Compare rental and purchase prices, then send a request.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="#request-offer">Request an offer</a>
+    <a class="btn btn-outline-secondary" href="#manage-listings">Manage listings</a>
+  </div>
+</div>
 
-  <h2>Exchange Resource</h2>
-  <form action="/exchange" method="POST">
-    <input type="text" name="hospital" placeholder="Hospital Name" required>
-    <input type="text" name="resource" placeholder="Resource" required>
-    <button type="submit">Exchange</button>
-  </form>
+{% if listing_message %}
+<div class="alert alert-success" role="status">{{ listing_message }}</div>
+{% endif %}
+{% if listing_error %}
+<div class="alert alert-danger" role="alert">{{ listing_error }}</div>
+{% endif %}
+{% if exchanged %}
+<div class="alert alert-success" role="status">
+  <strong>Demo request submitted.</strong>
+  {{ quantity }} × {{ exchanged }} offered by {{ supplier }} requested by {{ hospital }} —
+  {% if transaction_type == "rent" %}rental for {{ rental_days }} day(s){% else %}purchase{% endif %}.
+  Estimated total: <strong>₹{{ "{:,}".format(total|int) }}</strong>.
+  This prototype does not process payment or arrange delivery; contact the supplying hospital to confirm.
+</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
 
-  <p><a href="/">Back to Dashboard</a></p>
-</body>
-</html>
+<div class="alert alert-info d-flex gap-2 align-items-start" role="note">
+  <span aria-hidden="true">ℹ</span>
+  <div><strong>How it works</strong><br>Choose an available listing, select rent or buy, and review the estimated total before sending a demo request. Rental totals are calculated per item, per day.</div>
+</div>
+
+<div class="row g-4 align-items-start">
+  <section class="col-lg-8" aria-labelledby="offers-heading">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <h2 id="offers-heading" class="h4 mb-0">Available offers <span class="badge text-bg-secondary">{{ resources|length }}</span></h2>
+      <label class="visually-hidden" for="offer-search">Search offers</label>
+      <input id="offer-search" class="form-control" style="max-width: 18rem" type="search" placeholder="Search equipment or hospital">
+    </div>
+    <div class="row g-3" id="offer-list">
+      {% for r in resources %}
+      <div class="col-md-6 offer-card" data-search="{{ r['hospital'] }} {{ r['resource'] }} {{ r['type'] }}">
+        <article class="card h-100 shadow-sm">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+              <span class="badge text-bg-light border">{{ r['type']|title }}</span>
+              {% if r['available']|int > 0 %}
+              <span class="badge text-bg-success">{{ r['available'] }} available</span>
+              {% else %}
+              <span class="badge text-bg-secondary">Currently unavailable</span>
+              {% endif %}
+            </div>
+            <h3 class="h5 mb-1">{{ r['resource']|title }}</h3>
+            <p class="text-secondary mb-3">Offered by <strong>{{ r['hospital'] }}</strong></p>
+            <div class="border-top pt-3 mt-auto">
+              <div class="d-flex justify-content-between">
+                <span>Rent</span><strong>₹{{ "{:,}".format(r['rent_per_day']|int) }} <span class="fw-normal text-secondary">/ item / day</span></strong>
+              </div>
+              <div class="d-flex justify-content-between mt-1">
+                <span>Buy</span><strong>₹{{ "{:,}".format(r['purchase_price']|int) }} <span class="fw-normal text-secondary">/ item</span></strong>
+              </div>
+              {% if r['available']|int > 0 %}
+              <button class="btn btn-outline-primary w-100 mt-3 choose-offer" type="button" data-listing-id="{{ loop.index0 }}">Choose this offer</button>
+              {% else %}
+              <button class="btn btn-outline-secondary w-100 mt-3" type="button" disabled>Unavailable</button>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      </div>
+      {% else %}
+      <div class="col-12"><p class="text-secondary">There are no offers listed right now.</p></div>
+      {% endfor %}
+      <div id="no-offers" class="col-12 d-none"><p class="text-secondary">No offers match your search.</p></div>
+    </div>
+  </section>
+
+  <section class="col-lg-4" id="request-offer" aria-labelledby="request-heading">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 id="request-heading" class="h4">Request an offer</h2>
+        <p class="small text-secondary">Choose an offer above to fill in the item. Your estimated total updates as you set the terms.</p>
+        <form action="{{ url_for('exchange_resource') }}" method="post" id="offer-form">
+          <div class="mb-3">
+            <label for="hospital" class="form-label">Your hospital</label>
+            <input class="form-control" type="text" name="hospital" id="hospital" value="{{ hospital_name or '' }}" placeholder="e.g. City General Hospital" required>
+          </div>
+          <div class="mb-3">
+            <label for="resource" class="form-label">Equipment offer</label>
+            <select class="form-select" name="listing_id" id="resource" required>
+              <option value="">Select an available offer</option>
+              {% for r in resources %}
+              <option value="{{ loop.index0 }}" data-available="{{ r['available'] }}" data-rent="{{ r['rent_per_day'] }}" data-buy="{{ r['purchase_price'] }}" {% if r['available']|int < 1 %}disabled{% endif %} {% if selected_listing == loop.index0|string %}selected{% endif %}>
+                {{ r['resource']|title }} — {{ r['hospital'] }} ({{ r['available'] }} available)
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="transaction-type" class="form-label">I want to</label>
+            <select class="form-select" name="transaction_type" id="transaction-type" required>
+              <option value="rent" {% if transaction_type != 'buy' %}selected{% endif %}>Rent — pay per day</option>
+              <option value="buy" {% if transaction_type == 'buy' %}selected{% endif %}>Buy — one-time price</option>
+            </select>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label for="quantity" class="form-label">Quantity</label>
+              <input class="form-control" type="number" name="quantity" id="quantity" min="1" value="{{ quantity or 1 }}" required>
+            </div>
+            <div class="col-6" id="duration-field">
+              <label for="rental-days" class="form-label">Days renting</label>
+              <input class="form-control" type="number" name="rental_days" id="rental-days" min="1" max="90" value="{{ rental_days or 1 }}">
+            </div>
+          </div>
+          <div class="rounded bg-light p-3 mb-3" aria-live="polite">
+            <div class="d-flex justify-content-between"><span>Estimated total</span><strong id="estimate">Choose an offer</strong></div>
+            <div class="small text-secondary" id="estimate-note">Before delivery or other fees</div>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Send demo request</button>
+          <p class="small text-secondary mt-2 mb-0">No payment is taken. Confirm availability and fulfillment directly with the offering hospital.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="mt-5 mb-4" id="manage-listings" aria-labelledby="manage-heading">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div>
+      <h2 id="manage-heading" class="h3 mb-1">Manage marketplace listings</h2>
+      <p class="text-secondary mb-0">Add a new offer or update a listing's availability and prices.</p>
+    </div>
+    <span class="badge text-bg-warning">Demo — no sign-in or ownership controls</span>
+  </div>
+  <div class="alert alert-warning" role="note">
+    This prototype has no hospital accounts. Anyone who can access this page can edit or remove any listing. Do not use for real transactions or sensitive data.
+  </div>
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h3 class="h5">Add a listing</h3>
+          <form action="{{ url_for('save_marketplace_listing') }}" method="post" class="row g-3">
+            <input type="hidden" name="listing_id" value="">
+            <div class="col-md-6">
+              <label class="form-label" for="new-hospital">Hospital</label>
+              <input class="form-control" id="new-hospital" name="hospital" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="new-resource">Equipment name</label>
+              <input class="form-control" id="new-resource" name="resource" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="new-type">Category</label>
+              <input class="form-control" id="new-type" name="type" placeholder="Equipment, bed..." required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="new-available">Units available</label>
+              <input class="form-control" type="number" id="new-available" name="available" min="0" value="1" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="new-rent">Rent / item / day (₹)</label>
+              <input class="form-control" type="number" id="new-rent" name="rent_per_day" min="0" value="0" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="new-buy">Purchase / item (₹)</label>
+              <input class="form-control" type="number" id="new-buy" name="purchase_price" min="0" value="0" required>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <button class="btn btn-primary w-100" type="submit">Add listing</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-body">
+          <h3 class="h5">Edit or remove a listing</h3>
+          {% for r in resources %}
+          <details class="border rounded p-3 mb-2">
+            <summary class="fw-semibold">{{ r['resource']|title }} — {{ r['hospital'] }} <span class="text-secondary fw-normal">({{ r['available'] }} available)</span></summary>
+            <form id="edit-listing-{{ loop.index0 }}" action="{{ url_for('save_marketplace_listing') }}" method="post" class="row g-2 mt-2">
+              <input type="hidden" name="listing_id" value="{{ loop.index0 }}">
+              <div class="col-md-6">
+                <label class="form-label" for="edit-hospital-{{ loop.index0 }}">Hospital</label>
+                <input class="form-control" id="edit-hospital-{{ loop.index0 }}" name="hospital" value="{{ r['hospital'] }}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit-resource-{{ loop.index0 }}">Equipment name</label>
+                <input class="form-control" id="edit-resource-{{ loop.index0 }}" name="resource" value="{{ r['resource'] }}" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="edit-type-{{ loop.index0 }}">Category</label>
+                <input class="form-control" id="edit-type-{{ loop.index0 }}" name="type" value="{{ r['type'] }}" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="edit-available-{{ loop.index0 }}">Available</label>
+                <input class="form-control" type="number" id="edit-available-{{ loop.index0 }}" name="available" min="0" value="{{ r['available'] }}" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="edit-rent-{{ loop.index0 }}">Rent / day (₹)</label>
+                <input class="form-control" type="number" id="edit-rent-{{ loop.index0 }}" name="rent_per_day" min="0" value="{{ r['rent_per_day'] }}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="edit-buy-{{ loop.index0 }}">Purchase (₹)</label>
+                <input class="form-control" type="number" id="edit-buy-{{ loop.index0 }}" name="purchase_price" min="0" value="{{ r['purchase_price'] }}" required>
+              </div>
+            </form>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button class="btn btn-primary" type="submit" form="edit-listing-{{ loop.index0 }}">Save changes</button>
+                <form action="{{ url_for('delete_marketplace_listing', listing_index=loop.index0) }}" method="post" onsubmit="return confirm('Remove this marketplace listing?')">
+                  <button class="btn btn-outline-danger" type="submit">Remove listing</button>
+                </form>
+            </div>
+          </details>
+          {% else %}
+          <p class="text-secondary mb-0">No listings to edit yet. Add the first one with the form.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const search = document.getElementById('offer-search');
+const cards = [...document.querySelectorAll('.offer-card')];
+const noOffers = document.getElementById('no-offers');
+search.addEventListener('input', () => {
+  const term = search.value.trim().toLowerCase();
+  let visible = 0;
+  cards.forEach(card => {
+    const matches = card.dataset.search.toLowerCase().includes(term);
+    card.classList.toggle('d-none', !matches);
+    if (matches) visible++;
+  });
+  noOffers.classList.toggle('d-none', visible > 0);
+});
+
+const resourceSelect = document.getElementById('resource');
+const transactionSelect = document.getElementById('transaction-type');
+const quantityInput = document.getElementById('quantity');
+const daysInput = document.getElementById('rental-days');
+const durationField = document.getElementById('duration-field');
+const estimate = document.getElementById('estimate');
+const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+function updateEstimate() {
+  const option = resourceSelect.selectedOptions[0];
+  const renting = transactionSelect.value === 'rent';
+  durationField.classList.toggle('d-none', !renting);
+  daysInput.required = renting;
+  if (!option || !option.dataset.available) {
+    estimate.textContent = 'Choose an offer';
+    return;
+  }
+  const count = Math.max(1, Number(quantityInput.value) || 1);
+  const rate = Number(renting ? option.dataset.rent : option.dataset.buy);
+  const total = rate * count * (renting ? Math.max(1, Number(daysInput.value) || 1) : 1);
+  estimate.textContent = money.format(total);
+}
+document.querySelectorAll('.choose-offer').forEach(button => button.addEventListener('click', () => {
+  resourceSelect.value = button.dataset.listingId;
+  updateEstimate();
+  document.getElementById('request-offer').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('hospital').focus({ preventScroll: true });
+}));
+[resourceSelect, transactionSelect, quantityInput, daysInput].forEach(input => input.addEventListener('input', updateEstimate));
+updateEstimate();
+</script>
+{% endblock %}
