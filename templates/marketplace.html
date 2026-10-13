@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hospital Resource Marketplace</title>
+</head>
+<body>
+  <h1>Smart Resource Marketplace</h1>
+  <table border="1">
+    <tr><th>Hospital</th><th>Resource</th><th>Type</th><th>Available</th></tr>
+    {% for r in resources %}
+      <tr>
+        <td>{{ r['hospital'] }}</td>
+        <td>{{ r['resource'] }}</td>
+        <td>{{ r['type'] }}</td>
+        <td>{{ r['available'] }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Exchange Resource</h2>
+  <form action="/exchange" method="POST">
+    <input type="text" name="hospital" placeholder="Hospital Name" required>
+    <input type="text" name="resource" placeholder="Resource" required>
+    <button type="submit">Exchange</button>
+  </form>
+
+  <p><a href="/">Back to Dashboard</a></p>
+</body>
+</html>

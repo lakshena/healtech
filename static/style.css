@@ -1,0 +1,5 @@
+body { font-family: Arial; margin: 20px; }
+h1 { color: darkblue; }
+button { background: green; color: white; padding: 5px; border: none; }
+table { margin-top: 20px; border-collapse: collapse; }
+td, th { padding: 8px; border: 1px solid #ccc; }
