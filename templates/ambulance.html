@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block body %}
+<h2>Ambulance – incoming patient</h2>
+<form id="f" class="card card-body mb-3" style="max-width:480px">
+<label class="form-label">Name (optional)</label><input name="name" class="form-control mb-2">
+<label class="form-label">Severity (1–5)</label><select name="severity" class="form-select mb-3">{% for i in range(1,6) %}<option>{{i}}</option>{% endfor %}</select>
+<button class="btn btn-primary">Get bed recommendation</button></form>
+<div id="out"></div>
+<p class="text-muted">Free beds: {% for w,b in beds.items() %}{{w}} {{b.total-b.occupied}}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+{% endblock %}{% block scripts %}<script>
+let d;f.onsubmit=async e=>{e.preventDefault();d=Object.fromEntries(new FormData(f));
+const [,r]=await post('/api/ambulance/recommend',d);
+out.innerHTML=r.ward?`<div class="alert alert-warning">Recommended ward: <b>${r.ward}</b>
+<button class="btn btn-sm btn-success ms-2" onclick="approve('${r.ward}')">Approve</button></div>`:'<div class="alert alert-danger">No beds available</div>';};
+async function approve(w){const [ok,r]=await post('/api/ambulance/approve',{...d,ward:w});
+out.innerHTML=ok?`<div class="alert alert-success">${r.patient.id} admitted to ${w}</div>`:`<div class="alert alert-danger">${r.error}</div>`;}
+</script>{% endblock %}
