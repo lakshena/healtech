@@ -1,21 +1,178 @@
-# Healtech dashboard
+# Healtech
 
-Run the Streamlit dashboard from the repository root:
+Healtech is a prototype for hospital operations and resource sharing. It
+contains two independently launched applications:
+
+- A **Flask patient-flow app** for check-in, QR-based staff workflows, ambulance
+  intake, and a hospital equipment marketplace.
+- A **Streamlit hospital dashboard** for bed and emergency-room trends, doctor
+  availability, hospital notices, and a visual sample equipment marketplace.
+
+Both applications use illustrative prototype data. They are not clinical
+decision-support or payment systems.
+
+## Marketplace pitch
+
+**Put underused medical equipment to work—and help another hospital get what
+it needs, when it needs it.**
+
+The marketplace makes inter-hospital resource sharing easier to evaluate:
+browse offers by hospital, compare a clear per-item daily rental rate with a
+one-time purchase price, check listed availability, and estimate the cost for
+the quantity and rental duration you need. Hospitals can also add, update, or
+remove listings in the Flask prototype.
+
+This can help hospitals discover nearby capacity before buying equipment they
+may only need temporarily, while giving suppliers a simple way to advertise
+available stock. Actual availability, delivery, rental terms, and payment must
+be confirmed directly between hospitals. The current marketplace is a demo; it
+does not process payments or arrange fulfillment.
+
+## Flask patient-flow app
+
+### Run it
+
+From the repository root:
+
+```powershell
+python -m pip install -r requirements.txt
+python app.py
+```
+
+When the server reports that it is running, open the dashboard at
+<http://127.0.0.1:5000>. This is the hospital status overview. To open a
+specific section directly, visit `/patient`, `/staff`, `/ambulance`, or
+`/marketplace` on the same address.
+
+### Pages
+
+| URL | Function |
+| --- | --- |
+| `/` | Hospital status overview with bed occupancy, patient queue, arrival trends, and doctor schedules. |
+| `/patient` | Patient check-in form; submits a name and severity, then displays the patient ID, estimated wait, and QR code. |
+| `/staff` | Staff patient queue with QR scanning or manual ID entry; supports admitting and discharging patients. |
+| `/ambulance` | Enter an incoming patient's severity, get a ward recommendation, then approve the admission. |
+| `/marketplace` | Browse equipment offers and submit an estimated rent or purchase request. Includes listing management controls. |
+
+### Marketplace workflow
+
+1. Browse and search offers, including supplier hospital, resource category,
+   stock, rental price per item per day, and purchase price per item.
+2. Choose an offer, enter the requesting hospital, and select rent or buy.
+   Rental requests include a duration of 1–90 days; the page calculates an
+   estimated total as you edit quantity and duration.
+3. Submit a demo request. The prototype checks the requested stock, reduces
+   the listing's available quantity, and displays an estimated total. It does
+   not create a payment, delivery, or fulfillment record.
+4. Use **Manage listings** to add, edit, or remove offers. Listing edits update
+   the local CSV inventory.
+
+**Important:** There is no login, identity verification, or listing ownership
+enforcement. Anyone with access to the prototype can modify or remove any
+listing. Do not use it for real transactions or sensitive information.
+
+### Flask API
+
+All API request and response bodies use JSON.
+
+| Method and URL | Function |
+| --- | --- |
+| `GET /api/status` | Returns bed totals, number of waiting patients, and an estimated wait. |
+| `POST /api/checkin` | Adds a waiting patient. Send `{"name":"Example","severity":3}`; severity is from 1 (mild) to 5 (critical). Returns the patient record and estimated wait. |
+| `GET /api/qr/<patient_id>` | Returns a PNG QR code for the patient ID. |
+| `POST /api/patients/<patient_id>/status` | Changes a patient's status. Send `{"status":"admitted"}` or `{"status":"discharged"}`. Admission allocates a suitable free bed; errors such as a full hospital return HTTP 400. |
+| `POST /api/ambulance/recommend` | Recommends a ward for the supplied severity, for example `{"severity":4}`. |
+| `POST /api/ambulance/approve` | Approves an ambulance admission. Send `{"name":"Example","severity":4,"ward":"ICU"}`; name is optional. |
+| `POST /exchange` | Marketplace form handler. Validates the selected offer and rent/buy terms, calculates an estimate, and reduces the local demo stock. It does not store an order history. |
+| `POST /marketplace/listings/save` | Adds a listing when `listing_id` is blank, or updates the indexed listing when provided. |
+| `POST /marketplace/listings/<listing_index>/delete` | Removes the indexed marketplace listing. |
+
+The marketplace is part of the Flask app; it uses server-rendered HTML forms,
+not JSON, for its listing and order actions.
+
+### Flask data files
+
+The app reads and writes its local demo data under `data/`:
+
+- `beds.json` — ward capacity and occupied beds.
+- `patients.json` — patient IDs, severity, status, and ward.
+- `patient_arrivals.csv` and `doctor_schedules.csv` — dashboard charts and
+  schedule information.
+- `resources.csv` — marketplace offers. Columns are `hospital`, `resource`,
+  `type`, `available`, `rent_per_day`, and `purchase_price`; prices are integer
+  rupee amounts.
+
+Patient status changes and marketplace actions update local JSON or CSV files.
+Use a copy of the data files if you want to experiment without changing the
+checked-in sample data.
+
+## Streamlit hospital dashboard
+
+The Streamlit dashboard is a separate app from the Flask server. It offers a
+hospital overview and a visual sample equipment marketplace; it does not use
+the Flask `/marketplace` listing editor.
+
+Install its additional packages and run it:
 
 ```powershell
 python -m pip install streamlit pandas plotly requests
 python -m streamlit run "Dashboard main.py"
 ```
 
-The dashboard includes a sample hospital overview and a medical equipment
-marketplace with illustrative daily rental prices and local SVG illustrations.
-Select **Hospital overview** or **Marketplace** in the left panel. Live
-hospital data is optional and can be connected by entering the API base URL
-provided by the administrator.
+Streamlit prints a **Local URL** in the terminal when the dashboard is ready
+(typically <http://localhost:8501>). Open that URL in a browser, then choose
+**Hospital overview** or **Marketplace** in the left sidebar.
 
-Marketplace listings and prices are demo data, not confirmed offers.
-# Predictive Patient Flow Orchestrator (Flask + Bootstrap)
-pip install -r requirements.txt
-python app.py      # open http://127.0.0.1:5000
-Pages: / (status + Chart.js), /patient (check-in + QR), /staff (JS QR scanner, admit/discharge), /ambulance (severity-based bed allocation, human approval).
-Data: data/*.json and data/*.csv (mock).
+### Hospital overview features
+
+- **Sample or live source:** the default is illustrative sample data. Live
+  information can be loaded from a compatible hospital data API.
+- **Bed trends:** choose a 7-, 14-, or 30-day history and filter by hospital
+  area.
+- **Emergency room activity:** view the queue trend, current wait estimate, and
+  urgent-case count.
+- **Doctor availability:** search the roster and filter by availability.
+- **Notices:** review hospital alerts with severity, location, count, and
+  reference details.
+- **Refresh:** clear cached dashboard data and reload the selected source.
+
+The dashboard's optional live source expects these GET endpoints on the
+administrator-provided API base URL:
+
+| Endpoint | Expected data |
+| --- | --- |
+| `/api/dashboard/bed-occupancy?days=<n>&unit=<name>` | `trend` and `units` arrays. |
+| `/api/dashboard/er-queue` | `hourly`, `wait_minutes`, and `critical`. |
+| `/api/dashboard/doctor-availability?days=<n>&unit=<name>` | `doctors` array. |
+| `/api/dashboard/bottlenecks?days=<n>&unit=<name>` | An alerts array, directly or under an `alerts` key. |
+
+If live data cannot be loaded, the dashboard reports the issue and falls back
+to sample information.
+
+### Streamlit marketplace
+
+This visual-only sample marketplace includes category filtering, text search,
+equipment cards, illustrative availability, and per-day rental prices. The
+listings and prices are defined in `Dashboard main.py` and images are in
+`assets/marketplace/`. They are not connected to the Flask CSV inventory.
+
+## Project map
+
+```text
+app.py                    Flask routes, patient and bed logic, JSON APIs
+Dashboard main.py         Streamlit dashboard and visual marketplace
+templates/                Flask pages and shared layout
+data/                     Local prototype JSON and CSV data
+assets/marketplace/       Streamlit marketplace illustrations
+static/                   Flask static assets
+requirements.txt          Flask application dependencies
+```
+
+## Prototype and deployment notes
+
+- Sample patient, bed, staff, and marketplace information is illustrative.
+- The Flask development server and local files are intended for a demo, not a
+  production deployment.
+- Before real use, add authentication and hospital-level access controls,
+  persistent transactional storage, audit logging, verified listings, and
+  secure payment and fulfillment workflows.
