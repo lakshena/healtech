@@ -44,14 +44,24 @@ When the server reports that it is running, open the dashboard at
 specific section directly, visit `/patient`, `/staff`, `/ambulance`, or
 `/marketplace` on the same address.
 
-The Flask app listens on all network interfaces by default, so a device on
-the same private network can open `http://<server-LAN-IP>:5000/marketplace`
-(for example, replace `<server-LAN-IP>` with the address assigned to the
-computer running Flask). Do not use `127.0.0.1` from another device: that
-address always refers to the device you're using. If the page still cannot be
-reached, allow inbound connections to the chosen port on the server's private
-network firewall. Hosting providers may require a specific port; set `PORT`
-before launch, for example:
+The Flask app listens on all network interfaces by default. To open it from
+another computer or phone on the **same trusted private Wi-Fi/LAN**:
+
+1. On the computer running Flask, find its private IPv4 address with
+   `ipconfig` on Windows or `ip addr` on Linux.
+2. From the other device on that same network, open
+   `http://<server-LAN-IP>:5000/marketplace`, replacing `<server-LAN-IP>` with
+   that address. For example: `http://192.168.1.25:5000/marketplace`.
+
+Do not use `127.0.0.1` from another device; it refers to that other device
+itself. This private-network address does **not** make the app available from
+unrelated servers or over the public internet. If the app runs on another
+server, use that server's hostname or reachable IP and configure its network
+and firewall to allow the app's port. On the same private network, the local
+firewall may also need to allow inbound connections to the selected port.
+
+Hosting providers may require a specific port; set `PORT` before launch, for
+example:
 
 ```powershell
 $env:PORT = "8080"
@@ -63,6 +73,34 @@ specific bind address. For a public or production deployment, use a production
 WSGI server and add authentication, HTTPS, and hospital-level access controls.
 Binding to `0.0.0.0` alone does not publish the app through a hosting provider's
 firewall or router.
+
+### Publish the Flask website on Render
+
+The repository includes a Render Blueprint (`render.yaml`) for deploying the
+**whole Flask app**. This publishes the overview and all Flask pages; the
+marketplace is at `/marketplace` on the same site, not a separate service.
+
+1. Push or merge the deployment files to the GitHub branch you want to deploy.
+2. In Render, choose **New → Blueprint**, connect this GitHub repository, and
+   select that branch.
+3. Review and apply the Blueprint. It installs `requirements-render.txt` and
+   starts the Flask WSGI app with Render's assigned port.
+4. When the service is live, copy its public `https://<service-name>.onrender.com`
+   address. Share the marketplace at
+   `https://<service-name>.onrender.com/marketplace`; replace the example host
+   with the exact URL Render assigns.
+
+The Render Blueprint uses the free web-service plan, which may spin down while
+idle. Its local demo JSON and CSV files are not backed by persistent storage;
+edits or sample-data changes may be lost when the service restarts or is
+redeployed.
+
+**Public demo warning:** this app has no login or hospital-level authorization.
+Anyone with the public link may view and change demo patient data and may add,
+edit, remove, or order marketplace listings. Use only fictional data for a
+public demo. Do not enter real patient information or use this deployment for
+real clinical workflows or transactions. Add authentication and persistent
+storage before broader operational use.
 
 ### Pages
 
