@@ -44,14 +44,24 @@ When the server reports that it is running, open the dashboard at
 specific section directly, visit `/patient`, `/staff`, `/ambulance`, or
 `/marketplace` on the same address.
 
-The Flask app listens on all network interfaces by default, so a device on
-the same private network can open `http://<server-LAN-IP>:5000/marketplace`
-(for example, replace `<server-LAN-IP>` with the address assigned to the
-computer running Flask). Do not use `127.0.0.1` from another device: that
-address always refers to the device you're using. If the page still cannot be
-reached, allow inbound connections to the chosen port on the server's private
-network firewall. Hosting providers may require a specific port; set `PORT`
-before launch, for example:
+The Flask app listens on all network interfaces by default. To open it from
+another computer or phone on the **same trusted private Wi-Fi/LAN**:
+
+1. On the computer running Flask, find its private IPv4 address with
+   `ipconfig` on Windows or `ip addr` on Linux.
+2. From the other device on that same network, open
+   `http://<server-LAN-IP>:5000/marketplace`, replacing `<server-LAN-IP>` with
+   that address. For example: `http://192.168.1.25:5000/marketplace`.
+
+Do not use `127.0.0.1` from another device; it refers to that other device
+itself. This private-network address does **not** make the app available from
+unrelated servers or over the public internet. If the app runs on another
+server, use that server's hostname or reachable IP and configure its network
+and firewall to allow the app's port. On the same private network, the local
+firewall may also need to allow inbound connections to the selected port.
+
+Hosting providers may require a specific port; set `PORT` before launch, for
+example:
 
 ```powershell
 $env:PORT = "8080"
