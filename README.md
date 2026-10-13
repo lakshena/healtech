@@ -40,7 +40,7 @@ python app.py
 ```
 
 When the server reports that it is running, open the dashboard at
-<http://172.16.15.245:5000>. This is the hospital status overview. To open a
+<https://healtech-marketplace.onrender.com>. This is the hospital status overview. To open a
 specific section directly, visit `/patient`, `/staff`, `/ambulance`, or
 `/marketplace` on the same address.
 
