@@ -1,6 +1,8 @@
 {% extends "base.html" %}{% block body %}
 <h2>Staff – patient flow</h2>
-<div class="card card-body mb-3"><h5>Scan patient QR</h5><div id="reader" style="max-width:360px"></div>
+<div class="card card-body mb-3"><h5>Scan patient QR</h5>
+<div id="camera-help" class="alert alert-warning d-none" role="status"></div>
+<div id="reader" style="max-width:360px"></div>
 <div class="input-group mt-2" style="max-width:360px"><input id="pid" class="form-control" placeholder="or type ID e.g. P-1001">
 <button class="btn btn-success" onclick="act(pid.value,'admitted')">Admit</button>
 <button class="btn btn-secondary" onclick="act(pid.value,'discharged')">Discharge</button></div><div id="msg" class="mt-2"></div></div>
@@ -12,5 +14,15 @@
 {% endblock %}{% block scripts %}<script>
 async function act(id,status){const [ok,r]=await post(`/api/patients/${id.trim()}/status`,{status});
 if(!ok){msg.innerHTML=`<div class="alert alert-danger">${r.error}</div>`;return;} location.reload();}
-new Html5QrcodeScanner('reader',{fps:10,qrbox:220}).render(t=>{pid.value=t;msg.innerHTML=`<div class="alert alert-info">Scanned ${t} – choose Admit or Discharge</div>`;});
+if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+  document.getElementById('camera-help').textContent =
+    'Camera scanning requires a secure HTTPS site (or localhost). Open this staff page using your HTTPS deployment; you can still enter a patient ID manually.';
+  document.getElementById('camera-help').classList.remove('d-none');
+} else if (typeof Html5QrcodeScanner === 'undefined') {
+  document.getElementById('camera-help').textContent =
+    'The QR scanner could not load. You can still enter a patient ID manually.';
+  document.getElementById('camera-help').classList.remove('d-none');
+} else {
+  new Html5QrcodeScanner('reader',{fps:10,qrbox:220}).render(t=>{pid.value=t;msg.innerHTML=`<div class="alert alert-info">Scanned ${t} – choose Admit or Discharge</div>`;});
+}
 </script>{% endblock %}

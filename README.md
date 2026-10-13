@@ -60,6 +60,22 @@ server, use that server's hostname or reachable IP and configure its network
 and firewall to allow the app's port. On the same private network, the local
 firewall may also need to allow inbound connections to the selected port.
 
+### Access from outside the local network
+
+A LAN address such as `http://192.168.x.x:5000` is only reachable on that
+network. To let users elsewhere access the site, deploy it to a public hosting
+provider and share the provider's public HTTPS address. The marketplace is a
+page within the deployed site, at `<public-https-address>/marketplace`; it is
+not a separately hosted app. The example Render hostname
+`healtech-marketplace.onrender.com` is not guaranteed to exist until a Render
+service has been created and deployed from this repository's `render.yaml`.
+Confirm that both the site's root and `/marketplace` load before sharing it.
+
+Browser camera access for QR scanning requires a secure context: HTTPS on a
+deployed site, or localhost for local development. A plain HTTP LAN address
+cannot be made camera-capable by changing the URL path. On the staff page,
+enter a patient ID manually if the browser cannot use the camera.
+
 Hosting providers may require a specific port; set `PORT` before launch, for
 example:
 
@@ -80,15 +96,24 @@ The repository includes a Render Blueprint (`render.yaml`) for deploying the
 **whole Flask app**. This publishes the overview and all Flask pages; the
 marketplace is at `/marketplace` on the same site, not a separate service.
 
-1. Push or merge the deployment files to the GitHub branch you want to deploy.
-2. In Render, choose **New → Blueprint**, connect this GitHub repository, and
-   select that branch.
+1. Sign in to Render and start a Blueprint deployment for this repository:
+   [Deploy Healtech to Render](https://render.com/deploy?repo=https://github.com/lakshena/healtech).
+   You can also choose **New → Blueprint** in Render and connect
+   `lakshena/healtech` manually.
+2. Select the branch containing `render.yaml` (use `main` after the deployment
+   setup has been merged), then review the Blueprint.
 3. Review and apply the Blueprint. It installs `requirements-render.txt` and
    starts the Flask WSGI app with Render's assigned port.
 4. When the service is live, copy its public `https://<service-name>.onrender.com`
    address. Share the marketplace at
    `https://<service-name>.onrender.com/marketplace`; replace the example host
    with the exact URL Render assigns.
+
+The local/LAN demo address and a Render-style hostname do not become public
+just by putting them in a browser. A public URL is available only after the
+Blueprint is applied and Render shows the service as **Live**. Then test both
+the service root and `/marketplace`; a Render 404 means the service or route
+isn't live at that address yet.
 
 The Render Blueprint uses the free web-service plan, which may spin down while
 idle. Its local demo JSON and CSV files are not backed by persistent storage;
